@@ -3,6 +3,8 @@ import axios from 'axios';
 import { Shield, ShieldAlert, Activity, Users, ChevronRight, X } from 'lucide-react';
 import './App.css';
 
+axios.defaults.baseURL = 'https://sentinel-anamoly-detection.onrender.com';
+
 // Components
 const StatCard = ({ title, value, icon: Icon, colorClass }) => (
   <div className="glass-card animate-fade-in">
