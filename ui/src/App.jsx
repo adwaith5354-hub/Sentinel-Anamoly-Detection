@@ -217,6 +217,7 @@ function App() {
   }
 
   const handleJoyrideCallback = (data) => {
+    console.log('Joyride Callback:', data);
     const { action, index, status, type } = data;
 
     if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
@@ -239,8 +240,6 @@ function App() {
       } else if (nextStepIndex === 8) {
         setActiveTab('Overview');
       }
-      
-      setStepIndex(nextStepIndex);
     }
   };
 
@@ -757,7 +756,6 @@ function App() {
       <Joyride
         steps={tourSteps}
         run={runTour}
-        stepIndex={stepIndex}
         continuous={true}
         showProgress={true}
         showSkipButton={true}
