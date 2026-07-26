@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Shield, ShieldAlert, Activity, Users, X, Mail, LayoutDashboard, Bell, FileText, Settings, Database, ActivityIcon, Server, Download, Lock, TrendingUp } from 'lucide-react';
+import { Joyride } from 'react-joyride';
 import './App.css';
 
 axios.defaults.baseURL = 'https://sentinel-anamoly-detection.onrender.com';
@@ -63,6 +64,28 @@ function App() {
   
   // Real Metrics state
   const [realMetrics, setRealMetrics] = useState(null);
+
+  // Tour State
+  const [runTour, setRunTour] = useState(false);
+  const [tourSteps] = useState([
+    {
+      target: '.tour-sidebar',
+      content: 'Navigate between the ML overview, alert queue, entity forensics, and detailed model robustness metrics.',
+      placement: 'right',
+    },
+    {
+      target: '.tour-overview-stats',
+      content: 'These high-level KPIs show the ML Engine\'s true PR-AUC and Recall evaluated dynamically on the generated dataset.',
+    },
+    {
+      target: '.tour-alert-filters',
+      content: 'Filter the anomalous events by minimum risk score or specific anomaly types (like brute_force or credential_stuffing).',
+    },
+    {
+      target: '.tour-export-btn',
+      content: 'Export the current queue of alerts to a CSV report for further compliance or forensic analysis.',
+    }
+  ]);
 
   const fetchStats = async () => {
     try {
@@ -157,7 +180,7 @@ function App() {
           <Shield size={48} style={{ color: 'var(--accent-secondary)', margin: '0 auto 16px' }} />
           <h2 style={{ marginBottom: '8px' }}>SENTINEL SOC</h2>
           <p style={{ color: 'var(--text-secondary)', marginBottom: '32px' }}>Enterprise Authentication</p>
-          <button className="btn" style={{ width: '100%' }} onClick={() => setIsAuthenticated(true)}>
+          <button className="btn" style={{ width: '100%' }} onClick={() => { setIsAuthenticated(true); setRunTour(true); }}>
             <Lock size={16} /> Login as Analyst (Demo)
           </button>
         </div>
@@ -176,7 +199,7 @@ function App() {
         </div>
       </div>
       
-      <div className="stats-grid">
+      <div className="stats-grid tour-overview-stats">
         <StatCard title="Critical Alerts (Flagged)" value={stats?.flagged_events || '-'} valueColor="critical" />
         <StatCard title="Active Threat Types" value={stats?.distinct_anomaly_types || '-'} valueColor="safe" />
         <StatCard title="Total Events Analyzed" value={stats?.total_events || '-'} />
@@ -197,14 +220,14 @@ function App() {
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Active Alert Queue</h2>
-        <button className="btn btn-outline" onClick={exportToCSV}>
+        <button className="btn btn-outline tour-export-btn" onClick={exportToCSV}>
           <Download size={16} /> Export to CSV
         </button>
       </div>
       
       <div className="main-layout">
         {/* Filters */}
-        <div className="card" style={{ padding: '20px' }}>
+        <div className="card tour-alert-filters" style={{ padding: '20px' }}>
           <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Filter Rules</h3>
           
           <label className="form-label">Minimum Risk Score ({minScore})</label>
@@ -675,8 +698,28 @@ function App() {
 
   return (
     <div className="app-container">
+      <Joyride
+        steps={tourSteps}
+        run={runTour}
+        continuous={true}
+        showProgress={true}
+        showSkipButton={true}
+        styles={{
+          options: {
+            primaryColor: 'var(--accent-secondary)',
+            backgroundColor: 'var(--bg-card)',
+            textColor: 'var(--text-primary)',
+            arrowColor: 'var(--bg-card)',
+          }
+        }}
+        callback={(data) => {
+          if (data.status === 'finished' || data.status === 'skipped') {
+            setRunTour(false);
+          }
+        }}
+      />
       {/* Sidebar */}
-      <aside className="sidebar">
+      <aside className="sidebar tour-sidebar">
         <div className={`sidebar-item ${activeTab === 'Overview' ? 'active' : ''}`} onClick={() => setActiveTab('Overview')}>
           <LayoutDashboard size={20} />
           Overview
