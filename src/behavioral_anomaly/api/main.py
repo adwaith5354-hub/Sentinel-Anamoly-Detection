@@ -28,7 +28,7 @@ def get_data() -> pd.DataFrame:
     global _cached_data
     if _cached_data is None:
         print("Generating and scoring synthetic dataset...")
-        gen = SyntheticDataGenerator(GenerationConfig(entities=100, days=14, anomaly_rate=0.04))
+        gen = SyntheticDataGenerator(GenerationConfig(entities=25, days=7, anomaly_rate=0.06))
         raw = gen.generate()
         pipe = BehavioralAnomalyPipeline()
         pipe.fit(raw)
