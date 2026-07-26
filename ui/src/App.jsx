@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Shield, ShieldAlert, Activity, Users, X, Mail, LayoutDashboard, Bell, FileText, Settings, Database, ActivityIcon, Server, Download, Lock, TrendingUp } from 'lucide-react';
-import { Joyride, ACTIONS, EVENTS, STATUS } from 'react-joyride';
 import './App.css';
 
 axios.defaults.baseURL = 'https://sentinel-anamoly-detection.onrender.com';
@@ -64,56 +63,6 @@ function App() {
   
   // Real Metrics state
   const [realMetrics, setRealMetrics] = useState(null);
-
-  // Tour State
-  const [runTour, setRunTour] = useState(false);
-  const [stepIndex, setStepIndex] = useState(0);
-  const [tourSteps] = useState([
-    {
-      target: 'body',
-      placement: 'center',
-      title: 'Welcome to Sentinel SOC',
-      content: 'Would you like a quick tour of the dashboard?',
-      disableBeacon: true,
-      locale: { skip: 'Skip', next: 'Yes' }
-    },
-    {
-      target: '.tour-sidebar',
-      content: 'Navigate between the ML overview, alert queue, entity forensics, and detailed model robustness metrics.',
-      placement: 'right',
-      disableBeacon: true,
-    },
-    {
-      target: '.tour-overview-stats',
-      content: 'These high-level KPIs show the ML Engine\'s true PR-AUC and Recall evaluated dynamically on the generated dataset.',
-      disableBeacon: true,
-    },
-    {
-      target: '.tour-alert-filters',
-      content: 'Filter the anomalous events by minimum risk score or specific anomaly types (like brute_force or credential_stuffing).',
-      disableBeacon: true,
-    },
-    {
-      target: '.tour-export-btn',
-      content: 'Export the current queue of alerts to a CSV report for further compliance or forensic analysis.',
-      disableBeacon: true,
-    },
-    {
-      target: '.tour-entity-search',
-      content: 'Search for specific users or IP addresses to see a full historical timeline of their actions and anomaly scores.',
-      disableBeacon: true,
-    },
-    {
-      target: '.tour-robustness-chart',
-      content: 'View ablation studies showing how the ML engine performs with and without specific detector layers (L0, L1, L2, L3).',
-      disableBeacon: true,
-    },
-    {
-      target: '.tour-api-cloud',
-      content: 'Check the API configurations and system logs of the live inference engine running on Render cloud.',
-      disableBeacon: true,
-    }
-  ]);
 
   const fetchStats = async () => {
     try {
@@ -208,40 +157,13 @@ function App() {
           <Shield size={48} style={{ color: 'var(--accent-secondary)', margin: '0 auto 16px' }} />
           <h2 style={{ marginBottom: '8px' }}>SENTINEL SOC</h2>
           <p style={{ color: 'var(--text-secondary)', marginBottom: '32px' }}>Enterprise Authentication</p>
-          <button className="btn" style={{ width: '100%' }} onClick={() => { setIsAuthenticated(true); setRunTour(true); }}>
+          <button className="btn" style={{ width: '100%' }} onClick={() => setIsAuthenticated(true)}>
             <Lock size={16} /> Login as Analyst (Demo)
           </button>
         </div>
       </div>
     );
   }
-
-  const handleJoyrideCallback = (data) => {
-    console.log('Joyride Callback:', data);
-    const { action, index, status, type } = data;
-
-    if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
-      setRunTour(false);
-      setStepIndex(0);
-      setActiveTab('Overview'); // Reset to main page
-    } else if (type === EVENTS.STEP_AFTER || type === EVENTS.TARGET_NOT_FOUND) {
-      // Update step index
-      const nextStepIndex = index + (action === ACTIONS.PREV ? -1 : 1);
-      
-      // Perform tab changes based on the next step index
-      if (nextStepIndex === 3) {
-        setActiveTab('Alerts');
-      } else if (nextStepIndex === 5) {
-        setActiveTab('Entity');
-      } else if (nextStepIndex === 6) {
-        setActiveTab('Robustness');
-      } else if (nextStepIndex === 7) {
-        setActiveTab('API');
-      } else if (nextStepIndex === 8) {
-        setActiveTab('Overview');
-      }
-    }
-  };
 
   // Page Renderers
   const renderOverview = () => (
@@ -753,22 +675,7 @@ function App() {
 
   return (
     <div className="app-container">
-      <Joyride
-        steps={tourSteps}
-        run={runTour}
-        continuous={true}
-        showProgress={true}
-        showSkipButton={true}
-        styles={{
-          options: {
-            primaryColor: 'var(--accent-secondary)',
-            backgroundColor: 'var(--bg-card)',
-            textColor: 'var(--text-primary)',
-            arrowColor: 'var(--bg-card)',
-          }
-        }}
-        callback={handleJoyrideCallback}
-      />
+
       {/* Sidebar */}
       <aside className="sidebar tour-sidebar">
         <div className={`sidebar-item ${activeTab === 'Overview' ? 'active' : ''}`} onClick={() => setActiveTab('Overview')}>
