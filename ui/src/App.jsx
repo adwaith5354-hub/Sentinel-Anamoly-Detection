@@ -69,21 +69,33 @@ function App() {
   const [runTour, setRunTour] = useState(false);
   const [tourSteps] = useState([
     {
+      target: 'body',
+      placement: 'center',
+      title: 'Welcome to Sentinel SOC',
+      content: 'Would you like a quick tour of the dashboard?',
+      disableBeacon: true,
+      locale: { skip: 'Skip', next: 'Yes' }
+    },
+    {
       target: '.tour-sidebar',
       content: 'Navigate between the ML overview, alert queue, entity forensics, and detailed model robustness metrics.',
       placement: 'right',
+      disableBeacon: true,
     },
     {
       target: '.tour-overview-stats',
       content: 'These high-level KPIs show the ML Engine\'s true PR-AUC and Recall evaluated dynamically on the generated dataset.',
+      disableBeacon: true,
     },
     {
       target: '.tour-alert-filters',
       content: 'Filter the anomalous events by minimum risk score or specific anomaly types (like brute_force or credential_stuffing).',
+      disableBeacon: true,
     },
     {
       target: '.tour-export-btn',
       content: 'Export the current queue of alerts to a CSV report for further compliance or forensic analysis.',
+      disableBeacon: true,
     }
   ]);
 
