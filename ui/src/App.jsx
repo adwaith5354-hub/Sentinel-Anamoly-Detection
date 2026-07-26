@@ -45,6 +45,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [minScore, setMinScore] = useState(0.5);
   const [showAll, setShowAll] = useState(false);
+  const [attackFilter, setAttackFilter] = useState('');
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [eventDetail, setEventDetail] = useState(null);
   const [entityHistory, setEntityHistory] = useState([]);
@@ -62,7 +63,7 @@ function App() {
     try {
       setLoading(true);
       const res = await axios.get('/api/alerts', {
-        params: { min_score: minScore, show_all: showAll }
+        params: { min_score: minScore, show_all: showAll, attack_types: attackFilter }
       });
       setAlerts(res.data);
     } catch (err) {
@@ -75,7 +76,7 @@ function App() {
   useEffect(() => {
     fetchStats();
     fetchAlerts();
-  }, [minScore, showAll]);
+  }, [minScore, showAll, attackFilter]);
 
   const fetchDetail = async (id, entityId) => {
     setSelectedEventId(id);
@@ -133,6 +134,24 @@ function App() {
               />
               Show all events (unflagged included)
             </label>
+          </div>
+          <div className="input-group" style={{ marginTop: '16px' }}>
+            <label className="input-label">Filter by Attack Type</label>
+            <select 
+              className="form-control" 
+              value={attackFilter} 
+              onChange={(e) => setAttackFilter(e.target.value)}
+              style={{ background: 'rgba(0,0,0,0.5)' }}
+            >
+              <option value="">All Types</option>
+              <option value="brute_force">Brute Force</option>
+              <option value="impossible_travel">Impossible Travel</option>
+              <option value="credential_stuffing">Credential Stuffing</option>
+              <option value="lateral_movement">Lateral Movement</option>
+              <option value="data_exfiltration">Data Exfiltration</option>
+              <option value="privilege_escalation">Privilege Escalation</option>
+              <option value="insider_drift">Insider Drift</option>
+            </select>
           </div>
           <button className="btn btn-primary" style={{ width: '100%', marginTop: '16px' }} onClick={fetchAlerts}>
             Refresh Data
@@ -207,7 +226,10 @@ function App() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-lg)' }}>
                   <div>
                     <h4 style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', textTransform: 'uppercase' }}>Classification</h4>
-                    <p style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--danger)', marginBottom: '8px' }}>{eventDetail.predicted_anomaly_type}</p>
+                    <p style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--danger)', margin: '4px 0' }}>{eventDetail.predicted_anomaly_type}</p>
+                    {eventDetail.classification_confidence && (
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Confidence: {(eventDetail.classification_confidence * 100).toFixed(1)}%</div>
+                    )}
                     
                     <h4 style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', textTransform: 'uppercase', marginTop: '16px' }}>Risk Score</h4>
                     <div style={{ maxWidth: '200px', margin: '8px 0 16px 0' }}><ProgressBar score={eventDetail.anomaly_score} /></div>
