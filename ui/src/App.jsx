@@ -416,9 +416,17 @@ function App() {
             <li><strong>Precision, warm alerts:</strong> {realMetrics ? realMetrics.cold_start.warm_precision.toFixed(1) : 0}%</li>
           </ul>
           <div style={{ marginTop: '16px', padding: '16px', background: '#f8fafc', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-        </p>
-        <div className="table-container">
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '0.85rem' }}>
+            Cold-start entities take a disproportionate share of the budget. That over-representation is earned: those alerts are highly malicious.
+          </div>
+        </div>
+
+        <div className="card">
+          <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Anomaly-Type Confusion Matrix</h3>
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+            Predicted vs actual over detected alerts on the real dataset.
+          </p>
+          <div className="table-container">
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '0.85rem' }}>
             <thead>
               <tr style={{ background: '#f8fafc', borderBottom: '2px solid var(--border-color)' }}>
                 <th style={{ padding: '12px', textAlign: 'left' }}>Actual</th>
@@ -441,6 +449,7 @@ function App() {
             </tbody>
           </table>
         </div>
+      </div>
       </div>
 
       <div className="card" style={{ marginTop: '24px' }}>
