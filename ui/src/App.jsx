@@ -60,6 +60,9 @@ function App() {
   const [searchEntityId, setSearchEntityId] = useState('');
   const [entityHistory, setEntityHistory] = useState([]);
   const [entityLoading, setEntityLoading] = useState(false);
+  
+  // Real Metrics state
+  const [realMetrics, setRealMetrics] = useState(null);
 
   const fetchStats = async () => {
     try {
@@ -67,6 +70,15 @@ function App() {
       setStats(res.data);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const fetchMetrics = async () => {
+    try {
+      const res = await axios.get('/api/metrics');
+      setRealMetrics(res.data);
+    } catch (err) {
+      console.error("Failed to load metrics:", err);
     }
   };
 
@@ -87,6 +99,7 @@ function App() {
   useEffect(() => {
     if (isAuthenticated) {
       fetchStats();
+      fetchMetrics();
       if (activeTab === 'Alerts') {
         fetchAlerts();
       }
@@ -388,54 +401,21 @@ function App() {
       <h2 style={{ fontSize: '1.25rem', marginBottom: '24px' }}>Model Performance & Analytics</h2>
       
       <div className="stats-grid">
-        <StatCard title="Incident Recall@K" value="0.800" subtitle="48/60 campaigns" />
-        <StatCard title="Incident Precision@K" value="0.095" subtitle="ceiling 0.119 — budget-bound" />
-        <StatCard title="PR-AUC" value="0.637" subtitle="32x random (0.0199)" />
-        <StatCard title="Precision@1%" value="0.883" valueColor="safe" subtitle="ceiling 1.000" />
+        <StatCard title="PR-AUC" value={realMetrics ? realMetrics.pr_auc.toFixed(3) : "..."} subtitle="calculated from synthetic dataset" />
+        <StatCard title="Precision@1%" value={realMetrics ? realMetrics.precision_at_1pct.toFixed(3) : "..."} valueColor="safe" subtitle="ceiling 1.000" />
+        <StatCard title="Recall@1%" value={realMetrics ? realMetrics.recall_at_1pct.toFixed(3) : "..."} subtitle="budget-bound" />
+        <StatCard title="Cold Start Events" value={realMetrics ? realMetrics.cold_start.events.toLocaleString() : "..."} subtitle={`${realMetrics ? realMetrics.cold_start.stream_percentage.toFixed(1) : "0"}% of stream`} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
         <div className="card">
-          <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Signal Weights</h3>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-            Analyst priors divided by unsupervised reliability term. Never learned from labels.
-          </p>
-          <table style={{ border: '1px solid var(--border-color)', borderRadius: '8px', width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
-            <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '1px solid var(--border-color)' }}>
-                <th style={{ padding: '8px', textAlign: 'left' }}>Signal</th>
-                <th style={{ padding: '8px', textAlign: 'left' }}>Weight</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>fingerprint_mismatch</td><td style={{ padding: '8px' }}>0.7550</td></tr>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>country_novelty</td><td style={{ padding: '8px' }}>0.7000</td></tr>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>fail_rate_entity</td><td style={{ padding: '8px' }}>0.5620</td></tr>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>geo_velocity</td><td style={{ padding: '8px' }}>0.5030</td></tr>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>auth_method_novelty</td><td style={{ padding: '8px' }}>0.5000</td></tr>
-              <tr><td style={{ padding: '8px' }}>burst_ratio</td><td style={{ padding: '8px' }}>0.4800</td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div className="card">
           <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Cold-Start Analysis</h3>
           <ul style={{ lineHeight: '1.8', fontSize: '0.875rem', color: 'var(--text-primary)' }}>
-            <li><strong>Cold-start events:</strong> 4,375 (3.3% of stream)</li>
-            <li><strong>Share of top-1% budget:</strong> 12.5%</li>
-            <li><strong>Precision, cold alerts:</strong> <span style={{ color: 'var(--color-critical)', fontWeight: 600 }}>95.8%</span></li>
-            <li><strong>Precision, warm alerts:</strong> 87.3%</li>
+            <li><strong>Cold-start events:</strong> {realMetrics?.cold_start.events.toLocaleString()}</li>
+            <li><strong>Precision, cold alerts:</strong> <span style={{ color: 'var(--color-critical)', fontWeight: 600 }}>{realMetrics ? realMetrics.cold_start.cold_precision.toFixed(1) : 0}%</span></li>
+            <li><strong>Precision, warm alerts:</strong> {realMetrics ? realMetrics.cold_start.warm_precision.toFixed(1) : 0}%</li>
           </ul>
           <div style={{ marginTop: '16px', padding: '16px', background: '#f8fafc', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            Cold-start entities take 12.5% of the budget while being 3.3% of traffic. That over-representation is earned: those alerts are 95.8% malicious.
-          </div>
-        </div>
-      </div>
-
-      <div className="card" style={{ marginTop: '24px' }}>
-        <h3 style={{ fontSize: '1rem', marginBottom: '8px' }}>Anomaly-Type Confusion Matrix</h3>
-        <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-          Predicted vs actual over detected alerts. Exact-match accuracy 0.542. Attribution is rule-based over named evidence.
         </p>
         <div className="table-container">
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '0.85rem' }}>
@@ -631,6 +611,14 @@ function App() {
           <TrendingUp size={20} />
           Robustness
         </div>
+        <div className={`sidebar-item ${activeTab === 'AlertVolume' ? 'active' : ''}`} onClick={() => setActiveTab('AlertVolume')}>
+          <Activity size={20} />
+          Alert Volume
+        </div>
+        <div className={`sidebar-item ${activeTab === 'Internals' ? 'active' : ''}`} onClick={() => setActiveTab('Internals')}>
+          <Settings size={20} />
+          Internals
+        </div>
         <div className={`sidebar-item ${activeTab === 'API' ? 'active' : ''}`} onClick={() => setActiveTab('API')}>
           <Database size={20} />
           API Config
@@ -668,6 +656,8 @@ function App() {
           {activeTab === 'Entity' && renderEntityTracking()}
           {activeTab === 'Metrics' && renderModelMetrics()}
           {activeTab === 'Robustness' && renderRobustness()}
+          {activeTab === 'AlertVolume' && renderAlertVolume()}
+          {activeTab === 'Internals' && renderDetectorInternals()}
           {activeTab === 'API' && renderApiConfig()}
         </div>
       </div>

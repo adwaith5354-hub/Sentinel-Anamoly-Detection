@@ -4,6 +4,8 @@ from pydantic import BaseModel
 import pandas as pd
 from typing import List, Dict, Any, Optional
 import math
+import numpy as np
+import sklearn.metrics as sk_metrics
 
 from behavioral_anomaly.explain import explain_event
 from behavioral_anomaly.generator import GenerationConfig, SyntheticDataGenerator
@@ -99,3 +101,57 @@ def get_entity_history(entity_id: str, limit: int = 50):
         return []
     records = history.to_dict(orient="records")
     return [clean_record(r) for r in records]
+
+@app.get("/api/metrics")
+def get_metrics():
+    df = get_data()
+    
+    y_true = df["is_anomaly"].fillna(0).astype(int)
+    y_score = df["anomaly_score"].fillna(0)
+    
+    if y_true.sum() == 0 or len(y_score.unique()) == 1:
+        pr_auc = 0.0
+        precision_at_1pct = 0.0
+        recall_at_1pct = 0.0
+    else:
+        precision, recall, _ = sk_metrics.precision_recall_curve(y_true, y_score)
+        pr_auc = sk_metrics.auc(recall, precision)
+        
+        threshold_1pct = np.percentile(y_score, 99)
+        y_pred_1pct = (y_score >= threshold_1pct).astype(int)
+        precision_at_1pct = sk_metrics.precision_score(y_true, y_pred_1pct, zero_division=0)
+        recall_at_1pct = sk_metrics.recall_score(y_true, y_pred_1pct, zero_division=0)
+        
+    flagged = df[df.is_flagged == 1]
+    if not flagged.empty:
+        cm = pd.crosstab(flagged.anomaly_type, flagged.predicted_anomaly_type)
+        cm_dict = cm.to_dict(orient="index")
+    else:
+        cm_dict = {}
+        
+    entity_counts = df.groupby("entity_id").size()
+    cold_entities = entity_counts[entity_counts < 20].index
+    cold_events = df[df.entity_id.isin(cold_entities)]
+    
+    cold_start_events_count = len(cold_events)
+    stream_pct = (cold_start_events_count / len(df)) * 100 if len(df) > 0 else 0
+    
+    cold_flagged = cold_events[cold_events.is_flagged == 1]
+    cold_precision = sk_metrics.precision_score(cold_flagged.is_anomaly, cold_flagged.is_flagged, zero_division=0) * 100 if len(cold_flagged) > 0 else 0.0
+        
+    warm_events = df[~df.entity_id.isin(cold_entities)]
+    warm_flagged = warm_events[warm_events.is_flagged == 1]
+    warm_precision = sk_metrics.precision_score(warm_flagged.is_anomaly, warm_flagged.is_flagged, zero_division=0) * 100 if len(warm_flagged) > 0 else 0.0
+
+    return {
+        "pr_auc": float(pr_auc),
+        "precision_at_1pct": float(precision_at_1pct),
+        "recall_at_1pct": float(recall_at_1pct),
+        "confusion_matrix": cm_dict,
+        "cold_start": {
+            "events": int(cold_start_events_count),
+            "stream_percentage": float(stream_pct),
+            "cold_precision": float(cold_precision),
+            "warm_precision": float(warm_precision)
+        }
+    }
