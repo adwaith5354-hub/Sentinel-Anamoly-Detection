@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Shield, ShieldAlert, Activity, Users, X, Mail, LayoutDashboard, Bell, FileText, Settings, Database, ActivityIcon, Server } from 'lucide-react';
+import { Shield, ShieldAlert, Activity, Users, X, Mail, LayoutDashboard, Bell, FileText, Settings, Database, ActivityIcon, Server, Download, Lock } from 'lucide-react';
 import './App.css';
 
 axios.defaults.baseURL = 'https://sentinel-anamoly-detection.onrender.com';
@@ -40,6 +40,7 @@ const getSeverityLabel = (score) => {
 };
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState('Overview');
   const [stats, setStats] = useState(null);
   const [alerts, setAlerts] = useState([]);
@@ -83,11 +84,13 @@ function App() {
   };
 
   useEffect(() => {
-    fetchStats();
-    if (activeTab === 'Alerts') {
-      fetchAlerts();
+    if (isAuthenticated) {
+      fetchStats();
+      if (activeTab === 'Alerts') {
+        fetchAlerts();
+      }
     }
-  }, [minScore, showAll, attackFilter, activeTab]);
+  }, [minScore, showAll, attackFilter, activeTab, isAuthenticated]);
 
   const fetchDetail = async (id) => {
     setSelectedEventId(id);
@@ -115,7 +118,38 @@ function App() {
     }
   };
 
+  const exportToCSV = () => {
+    if (alerts.length === 0) return;
+    const headers = ['Event ID', 'Timestamp', 'Entity ID', 'Anomaly Type', 'Risk Score'];
+    const csvRows = alerts.map(a => 
+      `${a.event_id},${a.timestamp},${a.entity_id},${a.predicted_anomaly_type || 'Unknown'},${a.anomaly_score}`
+    );
+    const csvContent = [headers.join(','), ...csvRows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sentinel_alerts_${new Date().getTime()}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   const todayStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+
+  if (!isAuthenticated) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-app)' }}>
+        <div className="card" style={{ padding: '40px', maxWidth: '400px', width: '100%', textAlign: 'center' }}>
+          <Shield size={48} style={{ color: 'var(--accent-secondary)', margin: '0 auto 16px' }} />
+          <h2 style={{ marginBottom: '8px' }}>SENTINEL SOC</h2>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '32px' }}>Enterprise Authentication</p>
+          <button className="btn" style={{ width: '100%' }} onClick={() => setIsAuthenticated(true)}>
+            <Lock size={16} /> Login as Analyst (Demo)
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Page Renderers
   const renderOverview = () => (
@@ -147,7 +181,12 @@ function App() {
 
   const renderAlertQueue = () => (
     <>
-      <h2 style={{ fontSize: '1.25rem', marginBottom: '24px' }}>Active Alert Queue</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Active Alert Queue</h2>
+        <button className="btn btn-outline" onClick={exportToCSV}>
+          <Download size={16} /> Export to CSV
+        </button>
+      </div>
       
       <div className="main-layout">
         {/* Filters */}
@@ -343,6 +382,57 @@ function App() {
     </>
   );
 
+  const renderModelMetrics = () => (
+    <>
+      <h2 style={{ fontSize: '1.25rem', marginBottom: '24px' }}>Model Performance & Analytics</h2>
+      
+      <div className="stats-grid">
+        <StatCard title="Incident Recall@K" value="0.800" />
+        <StatCard title="Incident Precision@K" value="0.095" />
+        <StatCard title="PR-AUC" value="0.637" />
+        <StatCard title="Precision@1%" value="0.883" valueColor="safe" />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+        <div className="card">
+          <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Signal Weights</h3>
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+            Analyst priors divided by unsupervised reliability term. Never learned from labels.
+          </p>
+          <table style={{ border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+            <thead>
+              <tr style={{ background: '#f8fafc' }}>
+                <th>Signal</th>
+                <th>Weight</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>fingerprint_mismatch</td><td>0.7550</td></tr>
+              <tr><td>country_novelty</td><td>0.7000</td></tr>
+              <tr><td>fail_rate_entity</td><td>0.5620</td></tr>
+              <tr><td>geo_velocity</td><td>0.5030</td></tr>
+              <tr><td>auth_method_novelty</td><td>0.5000</td></tr>
+              <tr><td>burst_ratio</td><td>0.4800</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div className="card">
+          <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Cold-Start Analysis</h3>
+          <ul style={{ lineHeight: '1.8', fontSize: '0.875rem', color: 'var(--text-primary)' }}>
+            <li><strong>Cold-start events:</strong> 4,375 (3.3% of stream)</li>
+            <li><strong>Share of top-1% budget:</strong> 12.5%</li>
+            <li><strong>Precision, cold alerts:</strong> <span style={{ color: 'var(--color-critical)', fontWeight: 600 }}>95.8%</span></li>
+            <li><strong>Precision, warm alerts:</strong> 87.3%</li>
+          </ul>
+          <div style={{ marginTop: '16px', padding: '16px', background: '#f8fafc', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            Cold-start entities take 12.5% of the budget while being 3.3% of traffic. That over-representation is earned: those alerts are 95.8% malicious.
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
   const renderApiConfig = () => (
     <>
       <h2 style={{ fontSize: '1.25rem', marginBottom: '24px' }}>API & Integrations</h2>
@@ -361,6 +451,14 @@ function App() {
           <div><span style={{ color: 'var(--color-safe)' }}>GET</span> /api/alerts <span style={{ color: 'var(--text-muted)' }}>- Query anomaly queue</span></div>
           <div><span style={{ color: 'var(--color-safe)' }}>GET</span> /api/alerts/&#123;id&#125; <span style={{ color: 'var(--text-muted)' }}>- Fetch incident forensics</span></div>
           <div><span style={{ color: 'var(--color-safe)' }}>GET</span> /api/entities/&#123;id&#125;/history <span style={{ color: 'var(--text-muted)' }}>- Retrieve user timeline</span></div>
+        </div>
+
+        <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>System Logs</h4>
+        <div className="terminal-block" style={{ marginBottom: '24px' }}>
+          <div>[INFO] Model isolation_forest_v2 loaded into memory.</div>
+          <div>[INFO] Ingesting telemetry stream from Kafka broker.</div>
+          <div>[WARN] High volume of anomalous packets dropped from 45.33.21.12.</div>
+          <div>[INFO] Generating daily evaluation report...</div>
         </div>
         
         <a href={`${axios.defaults.baseURL}/docs`} target="_blank" rel="noreferrer" className="btn btn-outline">
@@ -386,9 +484,18 @@ function App() {
           <Users size={20} />
           Entity Tracking
         </div>
+        <div className={`sidebar-item ${activeTab === 'Metrics' ? 'active' : ''}`} onClick={() => setActiveTab('Metrics')}>
+          <Activity size={20} />
+          Model Metrics
+        </div>
         <div className={`sidebar-item ${activeTab === 'API' ? 'active' : ''}`} onClick={() => setActiveTab('API')}>
           <Database size={20} />
           API Config
+        </div>
+        <div style={{ flex: 1 }}></div>
+        <div className="sidebar-item" onClick={() => setIsAuthenticated(false)}>
+          <Lock size={20} />
+          Logout
         </div>
       </aside>
 
@@ -416,6 +523,7 @@ function App() {
           {activeTab === 'Overview' && renderOverview()}
           {activeTab === 'Alerts' && renderAlertQueue()}
           {activeTab === 'Entity' && renderEntityTracking()}
+          {activeTab === 'Metrics' && renderModelMetrics()}
           {activeTab === 'API' && renderApiConfig()}
         </div>
       </div>
