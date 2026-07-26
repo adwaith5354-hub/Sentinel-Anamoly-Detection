@@ -24,16 +24,15 @@ app.add_middleware(
 # In a real app, this would be queried from a database.
 _cached_data: Optional[pd.DataFrame] = None
 
+import os
+
 def get_data() -> pd.DataFrame:
     global _cached_data
     if _cached_data is None:
-        print("Generating and scoring synthetic dataset...")
-        gen = SyntheticDataGenerator(GenerationConfig(entities=25, days=7, anomaly_rate=0.06))
-        raw = gen.generate()
-        pipe = BehavioralAnomalyPipeline()
-        pipe.fit(raw)
-        _cached_data = pipe.score(raw)
-        print("Dataset ready.")
+        if os.path.exists("data.pkl"):
+            _cached_data = pd.read_pickle("data.pkl")
+        else:
+            raise FileNotFoundError("data.pkl not found!")
     return _cached_data
 
 # Helper to handle NaN values before JSON serialization
