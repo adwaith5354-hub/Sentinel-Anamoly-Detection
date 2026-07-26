@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Shield, ShieldAlert, Activity, Users, X, Mail, LayoutDashboard, Bell, FileText, Settings, Database, ActivityIcon, Server, Download, Lock, TrendingUp } from 'lucide-react';
-import { Joyride } from 'react-joyride';
+import { Joyride, ACTIONS, EVENTS, STATUS } from 'react-joyride';
 import './App.css';
 
 axios.defaults.baseURL = 'https://sentinel-anamoly-detection.onrender.com';
@@ -67,6 +67,7 @@ function App() {
 
   // Tour State
   const [runTour, setRunTour] = useState(false);
+  const [stepIndex, setStepIndex] = useState(0);
   const [tourSteps] = useState([
     {
       target: 'body',
@@ -95,6 +96,21 @@ function App() {
     {
       target: '.tour-export-btn',
       content: 'Export the current queue of alerts to a CSV report for further compliance or forensic analysis.',
+      disableBeacon: true,
+    },
+    {
+      target: '.tour-entity-search',
+      content: 'Search for specific users or IP addresses to see a full historical timeline of their actions and anomaly scores.',
+      disableBeacon: true,
+    },
+    {
+      target: '.tour-robustness-chart',
+      content: 'View ablation studies showing how the ML engine performs with and without specific detector layers (L0, L1, L2, L3).',
+      disableBeacon: true,
+    },
+    {
+      target: '.tour-api-cloud',
+      content: 'Check the API configurations and system logs of the live inference engine running on Render cloud.',
       disableBeacon: true,
     }
   ]);
@@ -199,6 +215,34 @@ function App() {
       </div>
     );
   }
+
+  const handleJoyrideCallback = (data) => {
+    const { action, index, status, type } = data;
+
+    if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
+      setRunTour(false);
+      setStepIndex(0);
+      setActiveTab('Overview'); // Reset to main page
+    } else if (type === EVENTS.STEP_AFTER || type === EVENTS.TARGET_NOT_FOUND) {
+      // Update step index
+      const nextStepIndex = index + (action === ACTIONS.PREV ? -1 : 1);
+      
+      // Perform tab changes based on the next step index
+      if (nextStepIndex === 3) {
+        setActiveTab('Alerts');
+      } else if (nextStepIndex === 5) {
+        setActiveTab('Entity');
+      } else if (nextStepIndex === 6) {
+        setActiveTab('Robustness');
+      } else if (nextStepIndex === 7) {
+        setActiveTab('API');
+      } else if (nextStepIndex === 8) {
+        setActiveTab('Overview');
+      }
+      
+      setStepIndex(nextStepIndex);
+    }
+  };
 
   // Page Renderers
   const renderOverview = () => (
@@ -381,7 +425,7 @@ function App() {
     <>
       <h2 style={{ fontSize: '1.25rem', marginBottom: '24px' }}>Entity Behavior Tracking</h2>
       
-      <div className="card" style={{ marginBottom: '24px', padding: '24px' }}>
+      <div className="card tour-entity-search" style={{ marginBottom: '24px', padding: '24px' }}>
         <form onSubmit={fetchEntityHistory} style={{ display: 'flex', gap: '16px', alignItems: 'flex-end' }}>
           <div style={{ flex: 1 }}>
             <label className="form-label">Search Entity ID (e.g., user_0010)</label>
@@ -643,7 +687,7 @@ function App() {
         </div>
       </div>
 
-      <div className="card">
+      <div className="card tour-robustness-chart">
         <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Layer Ablation — does each layer earn its keep?</h3>
         <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
           Δ Precision@1% vs the full model across four eval seeds. L0 and L3 are load-bearing; L1 and L2 straddle zero.
@@ -676,7 +720,7 @@ function App() {
   const renderApiConfig = () => (
     <>
       <h2 style={{ fontSize: '1.25rem', marginBottom: '24px' }}>API & Integrations</h2>
-      <div className="card">
+      <div className="card tour-api-cloud">
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
           <Server size={24} style={{ color: 'var(--accent-secondary)' }} />
           <h3 style={{ fontSize: '1.1rem', margin: 0 }}>Render Cloud Backend</h3>
@@ -713,6 +757,7 @@ function App() {
       <Joyride
         steps={tourSteps}
         run={runTour}
+        stepIndex={stepIndex}
         continuous={true}
         showProgress={true}
         showSkipButton={true}
@@ -724,11 +769,7 @@ function App() {
             arrowColor: 'var(--bg-card)',
           }
         }}
-        callback={(data) => {
-          if (data.status === 'finished' || data.status === 'skipped') {
-            setRunTour(false);
-          }
-        }}
+        callback={handleJoyrideCallback}
       />
       {/* Sidebar */}
       <aside className="sidebar tour-sidebar">
