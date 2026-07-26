@@ -17,7 +17,7 @@ from .constants import ANOMALY_TYPES, COUNTRIES, RESOURCES, SENSITIVE_RESOURCES
 class GenerationConfig:
     entities: int = 200
     days: int = 30
-    anomaly_rate: float = 0.04
+    anomaly_rate: float = 0.15
     seed: int = 42
 
 
