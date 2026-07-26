@@ -1,0 +1,25 @@
+[project]
+name = "behavioral-anomaly-detection"
+version = "0.1.0"
+description = "Synthetic identity and access behavioral anomaly detection"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "faker>=25.0",
+    "joblib>=1.4",
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "scikit-learn>=1.5",
+    "streamlit>=1.36",
+    "torch>=2.3",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.2"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100

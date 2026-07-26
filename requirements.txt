@@ -1,0 +1,8 @@
+faker>=25.0
+joblib>=1.4
+numpy>=1.26
+pandas>=2.2
+scikit-learn>=1.5
+streamlit>=1.36
+torch>=2.3
+pytest>=8.2

@@ -1,0 +1,15 @@
+generation:
+  entities: 200
+  days: 30
+  anomaly_rate: 0.04
+  seed: 42
+
+detector:
+  contamination: 0.04
+  random_state: 42
+
+classifier:
+  random_state: 42
+
+pipeline:
+  save_dir: artifacts/models

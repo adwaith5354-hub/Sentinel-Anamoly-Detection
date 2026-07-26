@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: behavioral-anomaly-detection
+Version: 0.1.0
+Summary: Synthetic identity and access behavioral anomaly detection
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: faker>=25.0
+Requires-Dist: joblib>=1.4
+Requires-Dist: numpy>=1.26
+Requires-Dist: pandas>=2.2
+Requires-Dist: scikit-learn>=1.5
+Requires-Dist: streamlit>=1.36
+Requires-Dist: torch>=2.3
