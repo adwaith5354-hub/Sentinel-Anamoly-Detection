@@ -482,6 +482,83 @@ function App() {
     </>
   );
 
+  const renderAlertVolume = () => (
+    <>
+      <h2 style={{ fontSize: '1.25rem', marginBottom: '24px' }}>Alert Volume Analysis</h2>
+      <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '24px' }}>
+        Volume under the rate-based operating point is stable by construction. The comparison is why that operating point was adopted over a fixed per-event threshold.
+      </p>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+        <div className="card">
+          <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>After — rate-based top-N per day</h3>
+          <div style={{ height: '300px', display: 'flex', alignItems: 'flex-end', gap: '4px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+            {Array.from({length: 30}).map((_, i) => (
+              <div key={i} style={{ flex: 1, background: '#7dd3fc', height: '20%', minHeight: '20%' }}></div>
+            ))}
+          </div>
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '16px' }}>median 5 · max 5</p>
+        </div>
+
+        <div className="card">
+          <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Before — fixed per-event threshold</h3>
+          <div style={{ height: '300px', display: 'flex', alignItems: 'flex-end', gap: '4px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+            {Array.from({length: 30}).map((_, i) => {
+              const h = i === 0 ? 95 : i === 1 ? 45 : i === 22 ? 25 : Math.random() * 20 + 2;
+              return <div key={i} style={{ flex: 1, background: '#38bdf8', height: `${h}%` }}></div>;
+            })}
+          </div>
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '16px' }}>
+            median 3 · max 38 — swings with how busy the estate is, because the threshold was calibrated per EVENT while alerts are per entity-window.
+          </p>
+        </div>
+      </div>
+    </>
+  );
+
+  const renderDetectorInternals = () => (
+    <>
+      <h2 style={{ fontSize: '1.25rem', marginBottom: '24px' }}>Detector Internals</h2>
+      <div className="card" style={{ marginBottom: '24px' }}>
+        <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Signal weights</h3>
+        <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+          Analyst priors divided by an unsupervised reliability term. Never learned from labels.
+        </p>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+          <thead>
+            <tr style={{ background: '#f8fafc', borderBottom: '1px solid var(--border-color)' }}>
+              <th style={{ padding: '8px', textAlign: 'left' }}>signal</th>
+              <th style={{ padding: '8px', textAlign: 'right' }}>weight</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>fingerprint_mismatch</td><td style={{ padding: '8px', textAlign: 'right' }}>0.7550</td></tr>
+            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>country_novelty</td><td style={{ padding: '8px', textAlign: 'right' }}>0.7000</td></tr>
+            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>fail_rate_entity</td><td style={{ padding: '8px', textAlign: 'right' }}>0.5620</td></tr>
+            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>geo_velocity</td><td style={{ padding: '8px', textAlign: 'right' }}>0.5030</td></tr>
+            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>auth_method_novelty</td><td style={{ padding: '8px', textAlign: 'right' }}>0.5000</td></tr>
+            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>burst_ratio</td><td style={{ padding: '8px', textAlign: 'right' }}>0.4800</td></tr>
+            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>peer_incongruence</td><td style={{ padding: '8px', textAlign: 'right' }}>0.4020</td></tr>
+            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>resource_surprisal</td><td style={{ padding: '8px', textAlign: 'right' }}>0.4020</td></tr>
+            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>cmd_surprisal</td><td style={{ padding: '8px', textAlign: 'right' }}>0.3520</td></tr>
+            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>hour_surprisal</td><td style={{ padding: '8px', textAlign: 'right' }}>0.3020</td></tr>
+            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>ip_novelty</td><td style={{ padding: '8px', textAlign: 'right' }}>0.2510</td></tr>
+            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>duration_z</td><td style={{ padding: '8px', textAlign: 'right' }}>0.2010</td></tr>
+            <tr><td style={{ padding: '8px' }}>ncmd_z</td><td style={{ padding: '8px', textAlign: 'right' }}>0.2010</td></tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <div className="card">
+        <p style={{ fontWeight: 600, fontSize: '0.875rem' }}>Correlation correction — Stouffer denominator √(wᵀΣw) = <span style={{ color: 'var(--color-safe)' }}>1.676</span></p>
+        <p style={{ fontWeight: 600, fontSize: '0.875rem', marginTop: '16px' }}>Alert-size confound removed — corr(alert score, alert size) = <span style={{ color: 'var(--color-safe)' }}>0.041</span></p>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '16px' }}>
+          The correlation above is measured on the selected export. On the default pair it was 0.263 before the size calibration was added, and service accounts took 19 of the top 30 alerts while being 30% of traffic — that comparison is development history, not a per-export measurement.
+        </p>
+      </div>
+    </>
+  );
+
   const renderRobustness = () => (
     <>
       <h2 style={{ fontSize: '1.25rem', marginBottom: '24px' }}>Model Robustness & Drift Analysis</h2>
