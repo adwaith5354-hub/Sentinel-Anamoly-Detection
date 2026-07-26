@@ -430,6 +430,65 @@ function App() {
           </div>
         </div>
       </div>
+
+      <div className="card" style={{ marginTop: '24px' }}>
+        <h3 style={{ fontSize: '1rem', marginBottom: '8px' }}>Anomaly-Type Confusion Matrix</h3>
+        <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+          Predicted vs actual over detected alerts. Exact-match accuracy 0.542. Attribution is rule-based over named evidence.
+        </p>
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr style={{ background: '#f8fafc' }}>
+                <th>Actual</th>
+                <th>brute_force</th>
+                <th>credential_stuffing</th>
+                <th>device_spoofing</th>
+                <th>impossible_travel</th>
+                <th>lateral_movement</th>
+                <th>low_and_slow</th>
+              </tr>
+            </thead>
+            <tbody style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
+              <tr><td>brute_force</td><td>1</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+              <tr><td>credential_stuffing</td><td>0</td><td>16</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+              <tr><td>device_spoofing</td><td>0</td><td>0</td><td>8</td><td>0</td><td>2</td><td>0</td></tr>
+              <tr><td>impossible_travel</td><td>0</td><td>0</td><td>0</td><td>7</td><td>1</td><td>0</td></tr>
+              <tr><td>insider_drift</td><td>0</td><td>1</td><td>0</td><td>1</td><td>9</td><td>1</td></tr>
+              <tr><td>lateral_movement</td><td>0</td><td>0</td><td>0</td><td>0</td><td>12</td><td>1</td></tr>
+              <tr><td>low_and_slow</td><td>0</td><td>0</td><td>1</td><td>0</td><td>25</td><td>8</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: '24px' }}>
+        <h3 style={{ fontSize: '1rem', marginBottom: '8px' }}>False Positives by Engineered Benign Behaviour</h3>
+        <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+          Confounders are injected at 4x the attack rate specifically to trip each detector layer. This is evidence that 'unusual' does not always mean 'malicious'.
+        </p>
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr style={{ background: '#f8fafc' }}>
+                <th>Confounder</th>
+                <th>False Positives</th>
+                <th>Total Events</th>
+                <th>FP Rate</th>
+                <th>Share of Alert Budget</th>
+              </tr>
+            </thead>
+            <tbody style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
+              <tr><td>(none - ordinary benign)</td><td>106</td><td>124872</td><td>0.0008</td><td>0.0803</td></tr>
+              <tr><td>ci_automation_burst</td><td>19</td><td>1293</td><td>0.0147</td><td>0.0144</td></tr>
+              <tr><td>cert_retry_loop</td><td>13</td><td>480</td><td>0.0271</td><td>0.0098</td></tr>
+              <tr><td>shared_jump_host</td><td>11</td><td>921</td><td>0.0119</td><td>0.0083</td></tr>
+              <tr><td>maintenance_window</td><td>2</td><td>436</td><td>0.0046</td><td>0.0015</td></tr>
+              <tr><td>os_patch</td><td>2</td><td>665</td><td>0.0030</td><td>0.0015</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </>
   );
 
