@@ -1,0 +1,17 @@
+name: Keep Render Awake
+
+on:
+  schedule:
+    # Run every 10 minutes to prevent Render's 15-minute inactivity spin-down
+    - cron: "*/10 * * * *"
+  workflow_dispatch: # Allows manual trigger from the GitHub Actions tab
+
+jobs:
+  ping-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Sentinel API
+        run: |
+          echo "Pinging https://sentinel-anamoly-detection.onrender.com/api/stats"
+          curl -s --max-time 60 https://sentinel-anamoly-detection.onrender.com/api/stats
+          echo "Ping successful!"
