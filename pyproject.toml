@@ -5,6 +5,12 @@ description = "Synthetic identity and access behavioral anomaly detection"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "fastapi>=0.111",
+    "uvicorn>=0.30",
+]
+
+[project.optional-dependencies]
+ml = [
     "faker>=25.0",
     "joblib>=1.4",
     "numpy>=1.26",
@@ -12,8 +18,6 @@ dependencies = [
     "scikit-learn>=1.5",
     "streamlit>=1.36",
 ]
-
-[dependency-groups]
 dev = ["pytest>=8.2"]
 
 [tool.pytest.ini_options]
