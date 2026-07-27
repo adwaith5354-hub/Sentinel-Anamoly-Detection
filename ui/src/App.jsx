@@ -162,15 +162,6 @@ function App() {
 
   const todayStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
 
-  if (loading && !stats) {
-    return (
-      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-app)', gap: '16px' }}>
-        <div style={{ width: '48px', height: '48px', border: '3px solid var(--border-color)', borderTopColor: 'var(--accent-secondary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Connecting to Sentinel backend...</p>
-      </div>
-    );
-  }
-
   if (!isAuthenticated) {
     return (
       <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-app)' }}>
