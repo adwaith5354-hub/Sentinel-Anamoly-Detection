@@ -8,8 +8,6 @@ import numpy as np
 import sklearn.metrics as sk_metrics
 
 from behavioral_anomaly.explain import explain_event
-from behavioral_anomaly.generator import GenerationConfig, SyntheticDataGenerator
-from behavioral_anomaly.pipeline import BehavioralAnomalyPipeline
 
 app = FastAPI(title="Behavioral Anomaly API")
 
