@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -6,12 +7,32 @@ from typing import List, Dict, Any, Optional
 import math
 import numpy as np
 import sklearn.metrics as sk_metrics
+import os
 
 from behavioral_anomaly.explain import explain_event
 
-app = FastAPI(title="Behavioral Anomaly API")
+_cached_data: Optional[pd.DataFrame] = None
 
-# Allow CORS for local React development
+def _load_data():
+    global _cached_data
+    if _cached_data is None:
+        pkl_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data.pkl")
+        if os.path.exists(pkl_path):
+            _cached_data = pd.read_pickle(pkl_path)
+        else:
+            pkl_path = "data.pkl"
+            if os.path.exists(pkl_path):
+                _cached_data = pd.read_pickle(pkl_path)
+            else:
+                raise FileNotFoundError("data.pkl not found!")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    _load_data()
+    yield
+
+app = FastAPI(title="Behavioral Anomaly API", lifespan=lifespan)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -20,19 +41,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global state to hold the dataset (for prototyping)
-# In a real app, this would be queried from a database.
-_cached_data: Optional[pd.DataFrame] = None
-
-import os
-
 def get_data() -> pd.DataFrame:
-    global _cached_data
     if _cached_data is None:
-        if os.path.exists("data.pkl"):
-            _cached_data = pd.read_pickle("data.pkl")
-        else:
-            raise FileNotFoundError("data.pkl not found!")
+        _load_data()
     return _cached_data
 
 # Helper to handle NaN values before JSON serialization
