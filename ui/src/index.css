@@ -358,3 +358,17 @@ tr.selected td {
 .terminal-key { color: #38bdf8; }
 .terminal-string { color: #a3e635; }
 .terminal-number { color: #f472b6; }
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent-secondary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

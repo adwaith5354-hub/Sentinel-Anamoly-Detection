@@ -16,7 +16,7 @@ const StatCard = ({ title, value, valueColor = 'dark', subtitle }) => (
     <h3 className="stat-title">{title}</h3>
     <p className={`stat-value ${valueColor}`}>
       {value === null || value === undefined ? (
-        <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Loading...</span>
+        <span className="spinner"></span>
       ) : value}
     </p>
     {subtitle && <p style={{ fontSize: '0.75rem', color: 'var(--color-safe)', marginTop: '8px' }}>↑ {subtitle}</p>}
