@@ -13,5 +13,5 @@ jobs:
       - name: Ping Sentinel API
         run: |
           echo "Pinging https://sentinel-anamoly-detection.onrender.com/api/stats"
-          curl -s --max-time 60 https://sentinel-anamoly-detection.onrender.com/api/stats
+          curl -s --max-time 180 --retry 3 --retry-delay 30 https://sentinel-anamoly-detection.onrender.com/api/stats
           echo "Ping successful!"
