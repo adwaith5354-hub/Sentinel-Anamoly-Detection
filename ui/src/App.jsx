@@ -14,7 +14,11 @@ const GithubIcon = ({ size = 20 }) => (
 const StatCard = ({ title, value, valueColor = 'dark', subtitle }) => (
   <div className="card stat-card">
     <h3 className="stat-title">{title}</h3>
-    <p className={`stat-value ${valueColor}`}>{value}</p>
+    <p className={`stat-value ${valueColor}`}>
+      {value === null || value === undefined ? (
+        <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Loading...</span>
+      ) : value}
+    </p>
     {subtitle && <p style={{ fontSize: '0.75rem', color: 'var(--color-safe)', marginTop: '8px' }}>↑ {subtitle}</p>}
   </div>
 );
@@ -46,6 +50,7 @@ function App() {
   const [stats, setStats] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
   
   // Alert Filters
   const [minScore, setMinScore] = useState(0.5);
@@ -64,13 +69,20 @@ function App() {
   // Real Metrics state
   const [realMetrics, setRealMetrics] = useState(null);
 
-  const fetchStats = async () => {
-    try {
-      const res = await axios.get('/api/stats');
-      setStats(res.data);
-    } catch (err) {
-      console.error(err);
+  const fetchStats = async (retries = 3) => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        setStatsLoading(true);
+        const res = await axios.get('/api/stats', { timeout: 30000 });
+        setStats(res.data);
+        setStatsLoading(false);
+        return;
+      } catch (err) {
+        console.error(err);
+        if (i < retries - 1) await new Promise(r => setTimeout(r, 5000));
+      }
     }
+    setStatsLoading(false);
   };
 
   const fetchMetrics = async () => {
