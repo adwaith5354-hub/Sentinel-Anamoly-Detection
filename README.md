@@ -7,7 +7,7 @@ Built specifically to handle extreme class imbalances and concept drift, Sentine
 ---
 
 ## 🚀 Live Demo
-- **Frontend Dashboard:** [Deployed on Vercel](#) *(Insert your Vercel Link here!)*
+- **Frontend Dashboard:** [Deployed on Vercel](#) https://sentinel-anamoly-detection.vercel.app/
 - **Backend API Docs:** [Deployed on Render (Swagger UI)](https://sentinel-anamoly-detection.onrender.com/docs)
 - **System Report:** Check the `/submission_documents` folder for a detailed breakdown of model assumptions, metrics, and limitations.
 
