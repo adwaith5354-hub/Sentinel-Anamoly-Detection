@@ -68,6 +68,7 @@ function App() {
   
   // Real Metrics state
   const [realMetrics, setRealMetrics] = useState(null);
+  const [robustness, setRobustness] = useState(null);
 
   const fetchStats = async (retries = 3) => {
     for (let i = 0; i < retries; i++) {
@@ -94,6 +95,15 @@ function App() {
     }
   };
 
+  const fetchRobustness = async () => {
+    try {
+      const res = await axios.get('/api/robustness');
+      setRobustness(res.data);
+    } catch (err) {
+      console.error("Failed to load robustness:", err);
+    }
+  };
+
   const fetchAlerts = async () => {
     try {
       setLoading(true);
@@ -112,6 +122,7 @@ function App() {
     if (isAuthenticated) {
       fetchStats();
       fetchMetrics();
+      fetchRobustness();
       if (activeTab === 'Alerts') {
         fetchAlerts();
       }
@@ -361,11 +372,11 @@ function App() {
       <div className="card tour-entity-search" style={{ marginBottom: '24px', padding: '24px' }}>
         <form onSubmit={fetchEntityHistory} style={{ display: 'flex', gap: '16px', alignItems: 'flex-end' }}>
           <div style={{ flex: 1 }}>
-            <label className="form-label">Search Entity ID (e.g., user_0010)</label>
+            <label className="form-label">Search Entity ID (e.g., use-0103)</label>
             <input 
               type="text" 
               className="form-control" 
-              placeholder="Enter User ID or IP Address..."
+              placeholder="Enter Entity ID (use-#### or ser-####)..."
               value={searchEntityId}
               onChange={(e) => setSearchEntityId(e.target.value)}
             />
@@ -414,8 +425,9 @@ function App() {
       
       <div className="stats-grid">
         <StatCard title="PR-AUC" value={realMetrics ? realMetrics.pr_auc.toFixed(3) : "..."} subtitle="calculated from synthetic dataset" />
-        <StatCard title="Precision@1%" value={realMetrics ? realMetrics.precision_at_1pct.toFixed(3) : "..."} valueColor="safe" subtitle="ceiling 1.000" />
-        <StatCard title="Recall@1%" value={realMetrics ? realMetrics.recall_at_1pct.toFixed(3) : "..."} subtitle="budget-bound" />
+        <StatCard title="Precision" value={realMetrics ? realMetrics.precision.toFixed(3) : "..."} valueColor="safe" subtitle="F1-optimal operating point" />
+        <StatCard title="Recall" value={realMetrics ? realMetrics.recall.toFixed(3) : "..."} valueColor="safe" subtitle="F1-optimal operating point" />
+        <StatCard title="F1" value={realMetrics ? realMetrics.f1.toFixed(3) : "..."} subtitle="harmonic mean" />
         <StatCard title="Cold Start Events" value={realMetrics ? realMetrics.cold_start.events.toLocaleString() : "..."} subtitle={`${realMetrics ? realMetrics.cold_start.stream_percentage.toFixed(1) : "0"}% of stream`} />
       </div>
 
@@ -428,65 +440,66 @@ function App() {
             <li><strong>Precision, warm alerts:</strong> {realMetrics ? realMetrics.cold_start.warm_precision.toFixed(1) : 0}%</li>
           </ul>
           <div style={{ marginTop: '16px', padding: '16px', background: '#f8fafc', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            Cold-start entities take a disproportionate share of the budget. That over-representation is earned: those alerts are highly malicious.
+            Novelty signals are suppressed until an entity has at least one prior event, so a brand-new entity is never flagged purely for being new. Cold-start precision is therefore undefined on this export (0 cold entities).
           </div>
         </div>
 
         <div className="card">
           <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Anomaly-Type Confusion Matrix</h3>
           <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-            Predicted vs actual over detected alerts on the real dataset.
+            Predicted vs actual over detected alerts, computed from the live export.
           </p>
           <div className="table-container">
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '0.85rem' }}>
-            <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '2px solid var(--border-color)' }}>
-                <th style={{ padding: '12px', textAlign: 'left' }}>Actual</th>
-                <th>brute_force</th>
-                <th>credential_stuffing</th>
-                <th>device_spoofing</th>
-                <th>impossible_travel</th>
-                <th>lateral_movement</th>
-                <th>low_and_slow</th>
-              </tr>
-            </thead>
-            <tbody style={{ fontFamily: 'monospace' }}>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '12px', textAlign: 'left' }}>brute_force</td><td>1</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '12px', textAlign: 'left' }}>credential_stuffing</td><td>0</td><td>16</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '12px', textAlign: 'left' }}>device_spoofing</td><td>0</td><td>0</td><td>8</td><td>0</td><td>2</td><td>0</td></tr>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '12px', textAlign: 'left' }}>impossible_travel</td><td>0</td><td>0</td><td>0</td><td>7</td><td>1</td><td>0</td></tr>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '12px', textAlign: 'left' }}>insider_drift</td><td>0</td><td>1</td><td>0</td><td>1</td><td>9</td><td>1</td></tr>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '12px', textAlign: 'left' }}>lateral_movement</td><td>0</td><td>0</td><td>0</td><td>0</td><td>12</td><td>1</td></tr>
-              <tr><td style={{ padding: '12px', textAlign: 'left' }}>low_and_slow</td><td>0</td><td>0</td><td>1</td><td>0</td><td>25</td><td>8</td></tr>
-            </tbody>
-          </table>
+            {realMetrics && realMetrics.confusion_matrix ? (() => {
+              const cm = realMetrics.confusion_matrix;
+              const cols = Object.keys(cm);
+              return (
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '0.7rem' }}>
+                  <thead>
+                    <tr style={{ background: '#f8fafc', borderBottom: '2px solid var(--border-color)' }}>
+                      <th style={{ padding: '8px', textAlign: 'left' }}>Actual \ Pred</th>
+                      {cols.map((c) => <th key={c} style={{ padding: '6px', fontWeight: 500 }}>{c}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody style={{ fontFamily: 'monospace' }}>
+                    {Object.entries(cm).map(([actual, row]) => (
+                      <tr key={actual} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                        <td style={{ padding: '8px', textAlign: 'left' }}>{actual}</td>
+                        {cols.map((c) => <td key={c} style={{ padding: '6px', color: row[c] ? 'inherit' : 'var(--text-muted)' }}>{row[c] || 0}</td>)}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              );
+            })() : <div style={{ color: 'var(--text-muted)' }}>Loading...</div>}
+          </div>
         </div>
-      </div>
       </div>
 
       <div className="card" style={{ marginTop: '24px' }}>
-        <h3 style={{ fontSize: '1rem', marginBottom: '8px' }}>False Positives by Engineered Benign Behaviour</h3>
+        <h3 style={{ fontSize: '1rem', marginBottom: '8px' }}>Detection Recall by Attack Type</h3>
         <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-          Confounders are injected at 4x the attack rate specifically to trip each detector layer. This is evidence that 'unusual' does not always mean 'malicious'.
+          Fraction of each attack family's events flagged at the deployed operating point, computed from the live export.
         </p>
         <div className="table-container">
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
             <thead>
               <tr style={{ background: '#f8fafc', borderBottom: '2px solid var(--border-color)' }}>
-                <th style={{ padding: '12px', textAlign: 'left' }}>Confounder</th>
-                <th style={{ textAlign: 'right' }}>False Positives</th>
-                <th style={{ textAlign: 'right' }}>Total Events</th>
-                <th style={{ textAlign: 'right' }}>FP Rate</th>
-                <th style={{ textAlign: 'right' }}>Share of Alert Budget</th>
+                <th style={{ padding: '12px', textAlign: 'left' }}>Attack Type</th>
+                <th style={{ textAlign: 'right' }}>Recall</th>
+                <th style={{ textAlign: 'right' }}>Alert Coverage</th>
               </tr>
             </thead>
             <tbody style={{ fontFamily: 'monospace' }}>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '12px' }}>(none - ordinary benign)</td><td style={{ textAlign: 'right' }}>106</td><td style={{ textAlign: 'right' }}>124872</td><td style={{ textAlign: 'right' }}>0.0008</td><td style={{ textAlign: 'right' }}>0.0803</td></tr>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '12px' }}>ci_automation_burst</td><td style={{ textAlign: 'right' }}>19</td><td style={{ textAlign: 'right' }}>1293</td><td style={{ textAlign: 'right' }}>0.0147</td><td style={{ textAlign: 'right' }}>0.0144</td></tr>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '12px' }}>cert_retry_loop</td><td style={{ textAlign: 'right' }}>13</td><td style={{ textAlign: 'right' }}>480</td><td style={{ textAlign: 'right' }}>0.0271</td><td style={{ textAlign: 'right' }}>0.0098</td></tr>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '12px' }}>shared_jump_host</td><td style={{ textAlign: 'right' }}>11</td><td style={{ textAlign: 'right' }}>921</td><td style={{ textAlign: 'right' }}>0.0119</td><td style={{ textAlign: 'right' }}>0.0083</td></tr>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '12px' }}>maintenance_window</td><td style={{ textAlign: 'right' }}>2</td><td style={{ textAlign: 'right' }}>436</td><td style={{ textAlign: 'right' }}>0.0046</td><td style={{ textAlign: 'right' }}>0.0015</td></tr>
-              <tr><td style={{ padding: '12px' }}>os_patch</td><td style={{ textAlign: 'right' }}>2</td><td style={{ textAlign: 'right' }}>665</td><td style={{ textAlign: 'right' }}>0.0030</td><td style={{ textAlign: 'right' }}>0.0015</td></tr>
+              {robustness && robustness.per_attack_recall ? Object.entries(robustness.per_attack_recall)
+                .sort((a, b) => b[1] - a[1])
+                .map(([attack, recall]) => (
+                  <tr key={attack} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    <td style={{ padding: '12px' }}>{attack}</td>
+                    <td style={{ textAlign: 'right' }}>{recall.toFixed(3)}</td>
+                    <td style={{ textAlign: 'right', color: recall >= 0.9 ? 'var(--color-safe)' : 'var(--text-secondary)' }}>{(recall * 100).toFixed(1)}%</td>
+                  </tr>
+                )) : <tr><td colSpan="3" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</td></tr>}
             </tbody>
           </table>
         </div>
@@ -494,47 +507,38 @@ function App() {
     </>
   );
 
-  const renderAlertVolume = () => (
-    <>
-      <h2 style={{ fontSize: '1.25rem', marginBottom: '24px' }}>Alert Volume Analysis</h2>
-      <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '24px' }}>
-        Volume under the rate-based operating point is stable by construction. The comparison is why that operating point was adopted over a fixed per-event threshold.
-      </p>
-      
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-        <div className="card">
-          <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>After — rate-based top-N per day</h3>
-          <div style={{ height: '300px', display: 'flex', alignItems: 'flex-end', gap: '4px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-            {Array.from({length: 30}).map((_, i) => (
-              <div key={i} style={{ flex: 1, background: '#7dd3fc', height: '20%', minHeight: '20%' }}></div>
-            ))}
-          </div>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '16px' }}>median 5 · max 5</p>
-        </div>
+  const renderAlertVolume = () => {
+    const days = robustness?.alert_volume?.days || [];
+    const peak = Math.max(1, ...days);
+    return (
+      <>
+        <h2 style={{ fontSize: '1.25rem', marginBottom: '24px' }}>Alert Volume Analysis</h2>
+        <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '24px' }}>
+          Daily flagged volume at the deployed operating point, computed from the live export. Volume tracks the injected attack schedule rather than estate busyness.
+        </p>
 
         <div className="card">
-          <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Before — fixed per-event threshold</h3>
-          <div style={{ height: '300px', display: 'flex', alignItems: 'flex-end', gap: '4px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-            {Array.from({length: 30}).map((_, i) => {
-              const h = i === 0 ? 95 : i === 1 ? 45 : i === 22 ? 25 : Math.random() * 20 + 2;
-              return <div key={i} style={{ flex: 1, background: '#38bdf8', height: `${h}%` }}></div>;
-            })}
+          <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Flagged events per day</h3>
+          <div style={{ height: '300px', display: 'flex', alignItems: 'flex-end', gap: '3px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+            {days.length > 0 ? days.map((value, i) => (
+              <div key={i} title={`day ${i + 1}: ${value}`} style={{ flex: 1, background: '#7dd3fc', height: `${(value / peak) * 100}%`, minHeight: '2%' }}></div>
+            )) : <div style={{ color: 'var(--text-muted)' }}>Loading...</div>}
           </div>
           <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '16px' }}>
-            median 3 · max 38 — swings with how busy the estate is, because the threshold was calibrated per EVENT while alerts are per entity-window.
+            median {robustness?.alert_volume?.median ?? '-'} · max {robustness?.alert_volume?.max ?? '-'} · {days.length} days
           </p>
         </div>
-      </div>
-    </>
-  );
+      </>
+    );
+  };
 
   const renderDetectorInternals = () => (
     <>
       <h2 style={{ fontSize: '1.25rem', marginBottom: '24px' }}>Detector Internals</h2>
       <div className="card" style={{ marginBottom: '24px' }}>
-        <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Signal weights</h3>
+        <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Rule signal weights (L0–L2)</h3>
         <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-          Analyst priors divided by an unsupervised reliability term. Never learned from labels.
+          Analyst-authored heuristics, never learned from labels. The ensemble combines these rules (85%) with an Isolation Forest on the engineered features (15%).
         </p>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
           <thead>
@@ -544,111 +548,107 @@ function App() {
             </tr>
           </thead>
           <tbody>
-            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>fingerprint_mismatch</td><td style={{ padding: '8px', textAlign: 'right' }}>0.7550</td></tr>
-            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>country_novelty</td><td style={{ padding: '8px', textAlign: 'right' }}>0.7000</td></tr>
-            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>fail_rate_entity</td><td style={{ padding: '8px', textAlign: 'right' }}>0.5620</td></tr>
-            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>geo_velocity</td><td style={{ padding: '8px', textAlign: 'right' }}>0.5030</td></tr>
-            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>auth_method_novelty</td><td style={{ padding: '8px', textAlign: 'right' }}>0.5000</td></tr>
-            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>burst_ratio</td><td style={{ padding: '8px', textAlign: 'right' }}>0.4800</td></tr>
-            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>peer_incongruence</td><td style={{ padding: '8px', textAlign: 'right' }}>0.4020</td></tr>
-            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>resource_surprisal</td><td style={{ padding: '8px', textAlign: 'right' }}>0.4020</td></tr>
-            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>cmd_surprisal</td><td style={{ padding: '8px', textAlign: 'right' }}>0.3520</td></tr>
-            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>hour_surprisal</td><td style={{ padding: '8px', textAlign: 'right' }}>0.3020</td></tr>
-            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>ip_novelty</td><td style={{ padding: '8px', textAlign: 'right' }}>0.2510</td></tr>
-            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '8px' }}>duration_z</td><td style={{ padding: '8px', textAlign: 'right' }}>0.2010</td></tr>
-            <tr><td style={{ padding: '8px' }}>ncmd_z</td><td style={{ padding: '8px', textAlign: 'right' }}>0.2010</td></tr>
+            {robustness && robustness.rule_weights ? robustness.rule_weights.map((item) => (
+              <tr key={item.signal} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                <td style={{ padding: '8px' }}>{item.signal}</td>
+                <td style={{ padding: '8px', textAlign: 'right' }}>{item.weight.toFixed(2)}</td>
+              </tr>
+            )) : <tr><td colSpan="2" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</td></tr>}
           </tbody>
         </table>
       </div>
-      
+
       <div className="card">
-        <p style={{ fontWeight: 600, fontSize: '0.875rem' }}>Correlation correction — Stouffer denominator √(wᵀΣw) = <span style={{ color: 'var(--color-safe)' }}>1.676</span></p>
-        <p style={{ fontWeight: 600, fontSize: '0.875rem', marginTop: '16px' }}>Alert-size confound removed — corr(alert score, alert size) = <span style={{ color: 'var(--color-safe)' }}>0.041</span></p>
+        <p style={{ fontWeight: 600, fontSize: '0.875rem' }}>Alert-size confound — corr(alert score, alert size) = <span style={{ color: 'var(--color-safe)' }}>{robustness ? robustness.score_size_correlation.toFixed(3) : '-'}</span></p>
         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '16px' }}>
-          The correlation above is measured on the selected export. On the default pair it was 0.263 before the size calibration was added, and service accounts took 19 of the top 30 alerts while being 30% of traffic — that comparison is development history, not a per-export measurement.
+          Measured on the live export. The score is driven by behavioural deviation (per-entity baselines and rate-based rule signals), not by how many events an entity produces.
         </p>
       </div>
     </>
   );
 
-  const renderRobustness = () => (
-    <>
-      <h2 style={{ fontSize: '1.25rem', marginBottom: '24px' }}>Model Robustness & Drift Analysis</h2>
-      
-      <div className="card" style={{ marginBottom: '24px' }}>
-        <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Concept Drift and Baseline Poisoning</h3>
-        <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-          The adaptation/rigidity trade-off is demonstrated and large. The poisoning claim is not met, and is reported as a negative result.
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px' }}>
-          <StatCard title="Frozen baseline" value="23.7" subtitle="false alerts on ONE legit entity" valueColor="critical" />
-          <StatCard title="Adaptive updating" value="0.5" subtitle="same entity, 47x fewer" valueColor="safe" />
-          <StatCard title="Poisoning resistance" value="not shown" subtitle="0.765 vs 0.751, p=0.05" />
-        </div>
-      </div>
+  const renderRobustness = () => {
+    const seeds = robustness?.held_out_seeds || [];
+    const summary = robustness?.held_out_summary;
+    const ablation = robustness?.ablation || [];
+    return (
+      <>
+        <h2 style={{ fontSize: '1.25rem', marginBottom: '24px' }}>Model Robustness & Drift Analysis</h2>
 
-      <div className="card" style={{ marginBottom: '24px' }}>
-        <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Held-out Seeds</h3>
-        <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-          Run once under a frozen config.
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px', marginBottom: '24px' }}>
-          <StatCard title="Incident recall" value="0.824" subtitle="holdout mean" />
-          <StatCard title="PR-AUC" value="0.611" subtitle="holdout mean" />
-          <StatCard title="R-Precision" value="0.569" subtitle="holdout mean" />
+        <div className="card" style={{ marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Held-out Seeds</h3>
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+            Five independently seeded 200-entity / 30-day corpora, evaluated under a frozen model configuration.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '24px', marginBottom: '24px' }}>
+            <StatCard title="Precision" value={summary ? summary.precision.toFixed(3) : '...'} valueColor="safe" subtitle="mean across seeds" />
+            <StatCard title="Recall" value={summary ? summary.recall.toFixed(3) : '...'} valueColor="safe" subtitle="mean across seeds" />
+            <StatCard title="PR-AUC" value={summary ? summary.pr_auc.toFixed(3) : '...'} subtitle="mean across seeds" />
+            <StatCard title="Incident Recall" value={summary ? summary.incident_recall.toFixed(3) : '...'} subtitle="attack sequences with ≥1 alert" />
+          </div>
+          <div className="table-container">
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+              <thead>
+                <tr style={{ background: '#f8fafc', borderBottom: '2px solid var(--border-color)' }}>
+                  <th style={{ padding: '12px', textAlign: 'left' }}>seed</th>
+                  <th style={{ textAlign: 'right' }}>prevalence</th>
+                  <th style={{ textAlign: 'right' }}>precision</th>
+                  <th style={{ textAlign: 'right' }}>recall</th>
+                  <th style={{ textAlign: 'right' }}>f1</th>
+                  <th style={{ textAlign: 'right' }}>incident_recall</th>
+                  <th style={{ textAlign: 'right' }}>pr_auc</th>
+                </tr>
+              </thead>
+              <tbody style={{ fontFamily: 'monospace' }}>
+                {seeds.length > 0 ? seeds.map((seed) => (
+                  <tr key={seed.seed} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    <td style={{ padding: '12px' }}>seed{seed.seed}</td>
+                    <td style={{ textAlign: 'right' }}>{seed.prevalence.toFixed(3)}</td>
+                    <td style={{ textAlign: 'right' }}>{seed.precision.toFixed(3)}</td>
+                    <td style={{ textAlign: 'right' }}>{seed.recall.toFixed(3)}</td>
+                    <td style={{ textAlign: 'right' }}>{seed.f1.toFixed(3)}</td>
+                    <td style={{ textAlign: 'right' }}>{seed.incident_recall.toFixed(3)}</td>
+                    <td style={{ textAlign: 'right' }}>{seed.pr_auc.toFixed(3)}</td>
+                  </tr>
+                )) : <tr><td colSpan="7" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</td></tr>}
+              </tbody>
+            </table>
+          </div>
         </div>
-        <div className="table-container">
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-            <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '2px solid var(--border-color)' }}>
-                <th style={{ padding: '12px', textAlign: 'left' }}>eval</th>
-                <th style={{ textAlign: 'right' }}>prevalence</th>
-                <th style={{ textAlign: 'right' }}>incident_recall</th>
-                <th style={{ textAlign: 'right' }}>precision_at_1pct</th>
-                <th style={{ textAlign: 'right' }}>r_precision</th>
-                <th style={{ textAlign: 'right' }}>pr_auc</th>
-              </tr>
-            </thead>
-            <tbody style={{ fontFamily: 'monospace' }}>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '12px' }}>seed101_delta05</td><td style={{ textAlign: 'right' }}>0.019</td><td style={{ textAlign: 'right' }}>0.706</td><td style={{ textAlign: 'right' }}>0.853</td><td style={{ textAlign: 'right' }}>0.553</td><td style={{ textAlign: 'right' }}>0.613</td></tr>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '12px' }}>seed102_delta05</td><td style={{ textAlign: 'right' }}>0.018</td><td style={{ textAlign: 'right' }}>0.750</td><td style={{ textAlign: 'right' }}>0.867</td><td style={{ textAlign: 'right' }}>0.506</td><td style={{ textAlign: 'right' }}>0.567</td></tr>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '12px' }}>seed103_delta05</td><td style={{ textAlign: 'right' }}>0.007</td><td style={{ textAlign: 'right' }}>0.800</td><td style={{ textAlign: 'right' }}>0.470</td><td style={{ textAlign: 'right' }}>0.589</td><td style={{ textAlign: 'right' }}>0.610</td></tr>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '12px' }}>seed104_delta05</td><td style={{ textAlign: 'right' }}>0.009</td><td style={{ textAlign: 'right' }}>0.944</td><td style={{ textAlign: 'right' }}>0.599</td><td style={{ textAlign: 'right' }}>0.624</td><td style={{ textAlign: 'right' }}>0.648</td></tr>
-              <tr><td style={{ padding: '12px' }}>seed105_delta05</td><td style={{ textAlign: 'right' }}>0.006</td><td style={{ textAlign: 'right' }}>0.920</td><td style={{ textAlign: 'right' }}>0.418</td><td style={{ textAlign: 'right' }}>0.572</td><td style={{ textAlign: 'right' }}>0.619</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
 
-      <div className="card tour-robustness-chart">
-        <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Layer Ablation — does each layer earn its keep?</h3>
-        <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-          Δ Precision@1% vs the full model across four eval seeds. L0 and L3 are load-bearing; L1 and L2 straddle zero.
-        </p>
-        <div className="table-container">
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-            <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '2px solid var(--border-color)' }}>
-                <th style={{ padding: '12px', textAlign: 'left' }}>config</th>
-                <th style={{ textAlign: 'right' }}>seed101_delta05</th>
-                <th style={{ textAlign: 'right' }}>seed102_delta05</th>
-                <th style={{ textAlign: 'right' }}>seed103_delta05</th>
-                <th style={{ textAlign: 'right' }}>seed3_delta05</th>
-                <th style={{ textAlign: 'right' }}>mean</th>
-              </tr>
-            </thead>
-            <tbody style={{ fontFamily: 'monospace' }}>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '12px' }}>full (all layers)</td><td style={{ textAlign: 'right' }}>+0.000</td><td style={{ textAlign: 'right' }}>+0.000</td><td style={{ textAlign: 'right' }}>+0.000</td><td style={{ textAlign: 'right' }}>+0.000</td><td style={{ textAlign: 'right' }}>+0.000</td></tr>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '12px' }}>without L0 deterministic rules</td><td style={{ textAlign: 'right', color: 'var(--color-critical)' }}>-0.539</td><td style={{ textAlign: 'right', color: 'var(--color-critical)' }}>-0.421</td><td style={{ textAlign: 'right', color: 'var(--color-critical)' }}>-0.208</td><td style={{ textAlign: 'right', color: 'var(--color-critical)' }}>-0.391</td><td style={{ textAlign: 'right', color: 'var(--color-critical)' }}>-0.389</td></tr>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '12px' }}>without L1 per-entity baseline</td><td style={{ textAlign: 'right', color: 'var(--color-safe)' }}>+0.013</td><td style={{ textAlign: 'right', color: 'var(--color-critical)' }}>-0.020</td><td style={{ textAlign: 'right', color: 'var(--color-critical)' }}>-0.033</td><td style={{ textAlign: 'right', color: 'var(--color-safe)' }}>+0.025</td><td style={{ textAlign: 'right', color: 'var(--color-critical)' }}>-0.004</td></tr>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '12px' }}>without L2 sequence</td><td style={{ textAlign: 'right', color: 'var(--color-safe)' }}>+0.008</td><td style={{ textAlign: 'right', color: 'var(--color-safe)' }}>+0.016</td><td style={{ textAlign: 'right', color: 'var(--color-critical)' }}>-0.016</td><td style={{ textAlign: 'right', color: 'var(--color-safe)' }}>+0.024</td><td style={{ textAlign: 'right', color: 'var(--color-safe)' }}>+0.008</td></tr>
-              <tr><td style={{ padding: '12px' }}>without L3 graph / long window</td><td style={{ textAlign: 'right', color: 'var(--color-critical)' }}>-0.229</td><td style={{ textAlign: 'right', color: 'var(--color-critical)' }}>-0.235</td><td style={{ textAlign: 'right', color: 'var(--color-critical)' }}>-0.008</td><td style={{ textAlign: 'right', color: 'var(--color-critical)' }}>-0.130</td><td style={{ textAlign: 'right', color: 'var(--color-critical)' }}>-0.150</td></tr>
-            </tbody>
-          </table>
+        <div className="card tour-robustness-chart">
+          <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Layer Ablation — does each layer earn its keep?</h3>
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+            Mean metrics per configuration across the five seeds. The L0 deterministic rules carry the most signal; the Isolation Forest adds complementary coverage.
+          </p>
+          <div className="table-container">
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+              <thead>
+                <tr style={{ background: '#f8fafc', borderBottom: '2px solid var(--border-color)' }}>
+                  <th style={{ padding: '12px', textAlign: 'left' }}>config</th>
+                  <th style={{ textAlign: 'right' }}>precision</th>
+                  <th style={{ textAlign: 'right' }}>recall</th>
+                  <th style={{ textAlign: 'right' }}>f1</th>
+                  <th style={{ textAlign: 'right' }}>pr_auc</th>
+                </tr>
+              </thead>
+              <tbody style={{ fontFamily: 'monospace' }}>
+                {ablation.length > 0 ? ablation.map((row) => (
+                  <tr key={row.config} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    <td style={{ padding: '12px' }}>{row.config}</td>
+                    <td style={{ textAlign: 'right' }}>{row.precision.toFixed(3)}</td>
+                    <td style={{ textAlign: 'right' }}>{row.recall.toFixed(3)}</td>
+                    <td style={{ textAlign: 'right' }}>{row.f1.toFixed(3)}</td>
+                    <td style={{ textAlign: 'right' }}>{row.pr_auc.toFixed(3)}</td>
+                  </tr>
+                )) : <tr><td colSpan="5" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</td></tr>}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
-    </>
-  );
+      </>
+    );
+  };
 
   const renderApiConfig = () => (
     <>
@@ -668,14 +668,16 @@ function App() {
           <div><span style={{ color: 'var(--color-safe)' }}>GET</span> /api/alerts <span style={{ color: 'var(--text-muted)' }}>- Query anomaly queue</span></div>
           <div><span style={{ color: 'var(--color-safe)' }}>GET</span> /api/alerts/&#123;id&#125; <span style={{ color: 'var(--text-muted)' }}>- Fetch incident forensics</span></div>
           <div><span style={{ color: 'var(--color-safe)' }}>GET</span> /api/entities/&#123;id&#125;/history <span style={{ color: 'var(--text-muted)' }}>- Retrieve user timeline</span></div>
+          <div><span style={{ color: 'var(--color-safe)' }}>GET</span> /api/metrics <span style={{ color: 'var(--text-muted)' }}>- Detection metrics</span></div>
+          <div><span style={{ color: 'var(--color-safe)' }}>GET</span> /api/robustness <span style={{ color: 'var(--text-muted)' }}>- Held-out & ablation results</span></div>
         </div>
 
         <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>System Logs</h4>
         <div className="terminal-block" style={{ marginBottom: '24px' }}>
-          <div>[INFO] Model isolation_forest_v2 loaded into memory.</div>
-          <div>[INFO] Ingesting telemetry stream from Kafka broker.</div>
-          <div>[WARN] High volume of anomalous packets dropped from 45.33.21.12.</div>
-          <div>[INFO] Generating daily evaluation report...</div>
+          <div>[INFO] Serving pre-computed JSON (zero heavy imports on cold start).</div>
+          <div>[INFO] Detection ensemble: L0 rules + per-entity baselines + Isolation Forest.</div>
+          <div>[INFO] Loaded {stats ? `${stats.total_events.toLocaleString()} events / ${stats.flagged_events.toLocaleString()} flagged` : 'telemetry export'}.</div>
+          <div>[INFO] Detection metrics: PR-AUC {realMetrics ? realMetrics.pr_auc.toFixed(3) : '-'} · precision {realMetrics ? realMetrics.precision.toFixed(3) : '-'} · recall {realMetrics ? realMetrics.recall.toFixed(3) : '-'}.</div>
         </div>
         
         <a href={`${axios.defaults.baseURL}/docs`} target="_blank" rel="noreferrer" className="btn btn-outline">

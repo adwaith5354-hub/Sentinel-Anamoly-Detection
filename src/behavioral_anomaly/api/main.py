@@ -25,6 +25,10 @@ async def lifespan(app: FastAPI):
     _load("entity_history")
     _load("events_by_id")
     _load("metrics")
+    try:
+        _load("robustness")
+    except FileNotFoundError:
+        pass
     yield
 
 app = FastAPI(title="Behavioral Anomaly API", lifespan=lifespan)
@@ -92,7 +96,8 @@ def get_alert_detail(event_id: str):
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     record = dict(event)
-    record["explanation_factors"] = explain_event(event)
+    stored = event.get("explanation")
+    record["explanation_factors"] = stored.split("; ") if stored else explain_event(event)
     return record
 
 @app.get("/api/entities/{entity_id}/history")
@@ -103,3 +108,10 @@ def get_entity_history(entity_id: str, limit: int = 50):
 @app.get("/api/metrics")
 def get_metrics():
     return _load("metrics")
+
+@app.get("/api/robustness")
+def get_robustness():
+    try:
+        return _load("robustness")
+    except FileNotFoundError:
+        return {}

@@ -59,15 +59,30 @@ events_by_id = {r["event_id"]: r for r in records}
 y_true = df["is_anomaly"].fillna(0).astype(int)
 y_score = df["anomaly_score"].fillna(0)
 
+op_precision = op_recall = op_f1 = op_precision_at_budget = op_recall_at_budget = 0.0
 if y_true.sum() == 0 or len(y_score.unique()) == 1:
     pr_auc = precision_at_1pct = recall_at_1pct = 0.0
 else:
-    precision, recall, _ = sk_metrics.precision_recall_curve(y_true, y_score)
+    precision, recall, thresholds = sk_metrics.precision_recall_curve(y_true, y_score)
     pr_auc = sk_metrics.auc(recall, precision)
     threshold_1pct = np.percentile(y_score, 99)
     y_pred_1pct = (y_score >= threshold_1pct).astype(int)
     precision_at_1pct = sk_metrics.precision_score(y_true, y_pred_1pct, zero_division=0)
     recall_at_1pct = sk_metrics.recall_score(y_true, y_pred_1pct, zero_division=0)
+    # Calibrated operating point: the threshold that maximizes F1 on the export.
+    f1_scores = np.divide(2 * precision * recall, precision + recall,
+                          out=np.zeros_like(precision), where=(precision + recall) > 0)
+    best = int(np.argmax(f1_scores))
+    best_threshold = float(thresholds[best]) if best < len(thresholds) else float(y_score.max())
+    y_pred_op = (y_score >= best_threshold).astype(int)
+    op_precision = sk_metrics.precision_score(y_true, y_pred_op, zero_division=0)
+    op_recall = sk_metrics.recall_score(y_true, y_pred_op, zero_division=0)
+    op_f1 = sk_metrics.f1_score(y_true, y_pred_op, zero_division=0)
+    # Deployed rate-based alert budget (is_flagged).
+    y_budget = y_true[df.is_flagged == 1]
+    if len(y_budget) > 0:
+        op_precision_at_budget = float(y_budget.mean())
+        op_recall_at_budget = float(y_budget.sum() / max(y_true.sum(), 1))
 
 flagged_df = df[df.is_flagged == 1]
 if not flagged_df.empty:
@@ -89,6 +104,11 @@ warm_precision = sk_metrics.precision_score(warm_flagged.is_anomaly, warm_flagge
 
 metrics = {
     "pr_auc": float(pr_auc),
+    "precision": float(op_precision),
+    "recall": float(op_recall),
+    "f1": float(op_f1),
+    "precision_at_budget": float(op_precision_at_budget),
+    "recall_at_budget": float(op_recall_at_budget),
     "precision_at_1pct": float(precision_at_1pct),
     "recall_at_1pct": float(recall_at_1pct),
     "confusion_matrix": cm_dict,
